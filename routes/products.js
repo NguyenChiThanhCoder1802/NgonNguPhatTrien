@@ -1164,23 +1164,23 @@ let data = [
   }
 ];
 //getall
-router.get('/', function (req, res, next) {
-  let queries = req.query;
-  let titleQ = queries.title ? queries.title : '';
-  let minPrice = queries.minPrice ? queries.minPrice : 0;
-  let maxPrice = queries.maxPrice ? queries.maxPrice : 1E6;
-  let page = queries.page ? queries.page : 1;
-  let limit = queries.limit ? queries.limit : 10;
-  console.log(queries);
-  let result = data.filter(
-    function (e) {
-      return (!e.isDeleted) && e.title.includes(titleQ) &&
-        e.price >= minPrice && e.price <= maxPrice
-    }
-  );
-  result = result.splice(limit * (page - 1), limit)
-  res.send(result);
-});
+// router.get('/', function (req, res, next) {
+//   let queries = req.query;
+//   let titleQ = queries.title ? queries.title : '';
+//   let minPrice = queries.minPrice ? queries.minPrice : 0;
+//   let maxPrice = queries.maxPrice ? queries.maxPrice : 1E6;
+//   let page = queries.page ? queries.page : 1;
+//   let limit = queries.limit ? queries.limit : 10;
+//   console.log(queries);
+//   let result = data.filter(
+//     function (e) {
+//       return (!e.isDeleted) && e.title.includes(titleQ) &&
+//         e.price >= minPrice && e.price <= maxPrice
+//     }
+//   );
+//   result = result.splice(limit * (page - 1), limit)
+//   res.send(result);
+// });
 //get by ID
 router.get('/:id', function (req, res, next) {
   let result = data.find(
@@ -1198,23 +1198,23 @@ router.get('/:id', function (req, res, next) {
 });
 
 
-router.post('/', function (req, res, next) {
-  let newObj = {
-    id: (getMaxID(data) + 1) + '',
-    title: req.body.title,
-    slug: ConvertTitleToSlug(req.body.title),
-    price: req.body.price,
-    description: req.body.description,
-    category: req.body.category,
-    images: req.body.images,
-    creationAt: new Date(Date.now()),
-    updatedAt: new Date(Date.now())
-  }
-  data.push(newObj);
-  console.log(data);
-  res.send(newObj);
-  //console.log(g);
-})
+// router.post('/', function (req, res, next) {
+//   let newObj = {
+//     id: (getMaxID(data) + 1) + '',
+//     title: req.body.title,
+//     slug: ConvertTitleToSlug(req.body.title),
+//     price: req.body.price,
+//     description: req.body.description,
+//     category: req.body.category,
+//     images: req.body.images,
+//     creationAt: new Date(Date.now()),
+//     updatedAt: new Date(Date.now())
+//   }
+//   data.push(newObj);
+//   console.log(data);
+//   res.send(newObj);
+//   //console.log(g);
+// })
 router.put('/:id', function (req, res, next) {
   let id = req.params.id;
   let result = data.find(
@@ -1252,6 +1252,100 @@ router.delete('/:id', function (req, res, next) {
     });
   }
 
+})
+router.get('/:slug', (req, res) => {
+  const { slug } = req.params
+
+  const product = data.find(item => item.slug === slug)
+
+  if (!product) {
+    return res.status(404).json({
+      message: 'Product not found'
+    })
+  }
+
+  res.json(product)
+})
+router.post('/', (req, res) => {
+  const { title, price, description, category, images } = req.body
+
+  if (!title || !price || !description) {
+    return res.status(400).json({
+      message: 'Title, price, description are required'
+    })
+  }
+
+  if (isNaN(price)) {
+    return res.status(400).json({
+      message: 'Price must be a number'
+    })
+  }
+
+  const slug = ConvertTitleToSlug(title)
+
+  const newProduct = {
+    id: getMaxID(data) + 1,
+    title,
+    slug,
+    price: Number(price),
+    description,
+    category,
+    images,
+    creationAt: new Date(),
+    updatedAt: new Date()
+  }
+
+  data.push(newProduct)
+
+  res.status(201).json(newProduct)
+})
+router.get('/', (req, res) => {
+  let { page = 1, limit = 10, minPrice, maxPrice } = req.query
+
+  page = Number(page)
+  limit = Number(limit)
+
+  if (!Number.isInteger(page) || page <= 0 ||
+      !Number.isInteger(limit) || limit <= 0) {
+    return res.status(400).json({
+      message: 'page and limit must be positive integers'
+    })
+  }
+
+  if (minPrice !== undefined && maxPrice !== undefined) {
+    minPrice = Number(minPrice)
+    maxPrice = Number(maxPrice)
+
+    if (isNaN(minPrice) || isNaN(maxPrice)) {
+      return res.status(400).json({
+        message: 'minPrice and maxPrice must be numbers'
+      })
+    }
+
+    if (maxPrice < minPrice) {
+      return res.status(400).json({
+        message: 'maxPrice must be greater than or equal to minPrice'
+      })
+    }
+  }
+
+  let result = [...data]
+  if (minPrice !== undefined) {
+    result = result.filter(item => item.price >= minPrice)
+  }
+  if (maxPrice !== undefined) {
+    result = result.filter(item => item.price <= maxPrice)
+  }
+
+  const start = (page - 1) * limit
+  const end = start + limit
+
+  res.json({
+    total: result.length,
+    page,
+    limit,
+    data: result.slice(start, end)
+  })
 })
 
 module.exports = router;

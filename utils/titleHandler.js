@@ -1,7 +1,11 @@
-module.exports = {
-    ConvertTitleToSlug: function (title) {
-        let result = title.toLowerCase();
-        result = result.replaceAll(' ', '-');
-        return title;
-    }
+function ConvertTitleToSlug(title) {
+  return title
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') 
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
 }
+
+module.exports = { ConvertTitleToSlug }
